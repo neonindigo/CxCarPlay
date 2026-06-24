@@ -1,0 +1,11 @@
+RxSwift/
+.DS_Store
+.build/
+.swiftpm/
+*.o
+*.d
+*.swp
+*.xcuserdata
+xcuserdata/
+*.xcscmblueprint
+.worktrees/
