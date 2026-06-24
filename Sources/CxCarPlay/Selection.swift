@@ -4,6 +4,10 @@ import Foundation
 
 /// Emitted when a user taps a list item. Call `complete()` when your app finishes handling
 /// the selection — CarPlay freezes the list UI until it is called.
+///
+/// `Selection` is `@MainActor` because CarPlay selection callbacks always fire on the main
+/// thread, and `complete()` must resume on the main thread to unblock the CarPlay UI safely.
+@MainActor
 public final class Selection {
     /// The item the user tapped.
     public let item: CPListItem
