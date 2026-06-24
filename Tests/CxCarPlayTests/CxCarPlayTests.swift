@@ -118,6 +118,9 @@ final class CPTabBarTemplateTests: XCTestCase {
         let list3 = CPListTemplate(title: "C", sections: [])
         subject.send([list3])
         XCTAssertEqual(tabBar.templates.count, 2)
+    }
+}
+
 import UIKit
 
 final class CPGridTemplateTests: XCTestCase {
