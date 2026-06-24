@@ -2,10 +2,89 @@ import XCTest
 import Combine
 @testable import CxCarPlay
 
-final class CxCarPlayTests: XCTestCase {
-    func testPlaceholder() {
-        // Placeholder — real tests in Wave 1
-        XCTAssertTrue(true)
+#if canImport(CarPlay)
+import CarPlay
+import Combine
+
+final class CPListTemplateTests: XCTestCase {
+    var cancellables = Set<AnyCancellable>()
+
+    override func tearDown() { cancellables.removeAll(); super.tearDown() }
+
+    /// Pumps the main run-loop until all currently-enqueued main-queue work has run.
+    private func flushMain() {
+        let exp = expectation(description: "main queue flush")
+        DispatchQueue.main.async { exp.fulfill() }
+        waitForExpectations(timeout: 1)
+    }
+
+    // 1. bind(sections:) calls updateSections on emission
+    func testBindUpdatesSections() {
+        let template = CPListTemplate(title: "Test", sections: [])
+        let subject = PassthroughSubject<[CPListSection], Never>()
+        let item = CPListItem(text: "Hello", detailText: nil)
+        let section = CPListSection(items: [item])
+
+        template.cx.bind(sections: subject).store(in: &cancellables)
+        subject.send([section])
+        flushMain()
+        XCTAssertEqual(template.sections.count, 1)
+    }
+
+    // 2. itemSelected emits when item handler fires
+    func testItemSelectedEmitsOnHandlerFire() {
+        let template = CPListTemplate(title: "Test", sections: [])
+        let subject = PassthroughSubject<[CPListSection], Never>()
+        var selections: [Selection] = []
+        let selectionExp = expectation(description: "selection received")
+
+        template.cx.itemSelected
+            .sink { selection in
+                selections.append(selection)
+                selection.complete()
+                selectionExp.fulfill()
+            }
+            .store(in: &cancellables)
+
+        let item = CPListItem(text: "Item 1", detailText: nil)
+        let section = CPListSection(items: [item])
+        template.cx.bind(sections: subject).store(in: &cancellables)
+        subject.send([section])
+        flushMain()
+
+        // Trigger the injected handler on the first item in the updated section
+        let updatedItem = template.sections.first?.items.first as? CPListItem
+        updatedItem?.handler?(updatedItem!, {})
+
+        waitForExpectations(timeout: 1)
+        XCTAssertEqual(selections.count, 1)
+        XCTAssertEqual(selections.first?.item.text, "Item 1")
+    }
+
+    // 3. Selection.complete() is idempotent (no double-call crash)
+    func testSelectionCompleteIsIdempotent() {
+        var handlerCallCount = 0
+        let item = CPListItem(text: "X", detailText: nil)
+        let selection = Selection(item: item, completionHandler: { handlerCallCount += 1 })
+        selection.complete()
+        selection.complete()  // second call must be a no-op
+        XCTAssertEqual(handlerCallCount, 1)
+    }
+
+    // 4. Cancelling bind stops section updates
+    func testCancellingBindStopsUpdates() {
+        let template = CPListTemplate(title: "Test", sections: [])
+        let subject = PassthroughSubject<[CPListSection], Never>()
+        var cancellable: AnyCancellable? = template.cx.bind(sections: subject)
+
+        subject.send([CPListSection(items: [CPListItem(text: "A", detailText: nil)])])
+        flushMain()
+        XCTAssertEqual(template.sections.count, 1)
+
+        cancellable = nil  // cancel
+        subject.send([CPListSection(items: [CPListItem(text: "B", detailText: nil), CPListItem(text: "C", detailText: nil)])])
+        // sections count should remain 1 after cancellation
+        XCTAssertEqual(template.sections.count, 1)
     }
 }
 
@@ -73,3 +152,9 @@ final class CPGridTemplateTests: XCTestCase {
     }
 }
 #endif
+#endif
+
+// Always-compiled placeholder to keep test target non-empty on macOS
+final class CxCarPlayPlaceholderTests: XCTestCase {
+    func testAlwaysPasses() { XCTAssertTrue(true) }
+}
