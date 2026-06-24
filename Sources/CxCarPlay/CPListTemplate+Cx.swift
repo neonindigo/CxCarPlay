@@ -33,7 +33,11 @@ extension CxCarPlayExtension where Base: CPListTemplate {
                         .map { item -> CPListItem in
                             let copy = CPListItem(text: item.text, detailText: item.detailText, image: item.image)
                             copy.accessoryType = item.accessoryType
+                            copy.accessoryImage = item.accessoryImage
                             copy.isEnabled = item.isEnabled
+                            copy.isPlaying = item.isPlaying
+                            copy.playbackProgress = item.playbackProgress
+                            copy.playingIndicatorLocation = item.playingIndicatorLocation
                             copy.userInfo = item.userInfo
                             copy.handler = { [weak subject] selectableItem, completionHandler in
                                 guard let subject,
