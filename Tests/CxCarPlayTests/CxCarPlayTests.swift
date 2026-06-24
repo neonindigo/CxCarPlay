@@ -39,6 +39,37 @@ final class CPTabBarTemplateTests: XCTestCase {
         let list3 = CPListTemplate(title: "C", sections: [])
         subject.send([list3])
         XCTAssertEqual(tabBar.templates.count, 2)
+import UIKit
+
+final class CPGridTemplateTests: XCTestCase {
+    var cancellables = Set<AnyCancellable>()
+    override func tearDown() { cancellables.removeAll(); super.tearDown() }
+
+    // 1. bind(gridButtons:) calls updateGridButtons on emission
+    func testBindUpdatesButtons() {
+        let button1 = CPGridButton(titleVariants: ["Play"], image: UIImage()) { _ in }
+        let template = CPGridTemplate(title: "Test", gridButtons: [button1])
+        let subject = PassthroughSubject<[CPGridButton], Never>()
+
+        template.cx.bind(gridButtons: subject).store(in: &cancellables)
+        let button2 = CPGridButton(titleVariants: ["Pause"], image: UIImage()) { _ in }
+        subject.send([button2])
+        XCTAssertEqual(template.gridButtons.count, 1)
+    }
+
+    // 2. Cancelling stops updates
+    func testCancelStopsUpdates() {
+        let template = CPGridTemplate(title: "Test", gridButtons: [])
+        let subject = PassthroughSubject<[CPGridButton], Never>()
+        var cancellable: AnyCancellable? = template.cx.bind(gridButtons: subject)
+        let b1 = CPGridButton(titleVariants: ["A"], image: UIImage()) { _ in }
+        subject.send([b1])
+        XCTAssertEqual(template.gridButtons.count, 1)
+        cancellable = nil
+        let b2 = CPGridButton(titleVariants: ["B"], image: UIImage()) { _ in }
+        let b3 = CPGridButton(titleVariants: ["C"], image: UIImage()) { _ in }
+        subject.send([b2, b3])
+        XCTAssertEqual(template.gridButtons.count, 1)  // unchanged after cancel
     }
 }
 #endif
